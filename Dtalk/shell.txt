@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# 钉钉的 Webhook 地址
+DINGTALK_WEBHOOK="https://oapi.dingtalk.com/robot/send?access_token=*************"
+
+# 获取 Jenkins 构建的状态
+BUILD_STATUS=$BUILD_RESULT
+BUILD_URL=$BUILD_URL
+JOB_NAME=$JOB_NAME
+BUILD_NUMBER=$BUILD_NUMBER
+BRANCH_NAME=$GIT_BRANCH
+JOB_URL=$JOB_URL
+echo "JOB_URL原始构建地址:$JOB_URL"
+#获取重新部署api
+NEW_JOB_URL=$(echo "$JOB_URL" | sed 's|http://10.2.119.193:49002|https://10.205.16.32:49002|')
+NEW_JOB_URL2=$NEW_JOB_URL'buildWithParameters'
+
+echo "原始构建地址:$BUILD_URL"
+new_url=$(echo "$BUILD_URL" | sed 's|http://10.2.119.193:49002|https://10.205.16.32:49002|')
+new_url_api=$new_url'api/json'
+res=$(curl -s -k GET "$new_url_api" -u "wanyuan:11416f3cbd49ca69e37692ba04f51dfdd5")
+
+# 获取 Jenkins 构建的状态
+BUILD_STATUS=$(echo "$res" | grep -oP '"result": *"\K[^"]*')
+BUILD_USER=$(echo "$res" | grep -oP '"userName": *"\K[^"]*')
+CHANGE_TIPS=$(echo "$res" | grep -oP '"comment": *"\K[^"]*' || echo "无变更内容")
+echo "构建状态:$BUILD_STATUS"
+
+
+# 设置消息内容
+if [ "$BUILD_STATUS" == "SUCCESS" ]; then
+  MESSAGE="## **【部署成功通知】**\n #### 项目构建: $JOB_NAME #$BUILD_NUMBER\n#### 构建链接: [点击跳转]($new_url)\n#### 构建分支：$BRANCH_NAME\n#### 构建状态：$BUILD_STATUS\n#### 操作人：$BUILD_USER\n#### 变更内容：$CHANGE_TIPS"
+else
+  MESSAGE="## **【部署失败通知】**\n #### 项目构建: $JOB_NAME #$BUILD_NUMBER\n#### 构建链接: [点击跳转]($new_url)\n#### 构建分支：$BRANCH_NAME\n#### 构建状态：$BUILD_STATUS\n#### 操作人：$BUILD_USER\n#### 变更内容：$CHANGE_TIPS"
+fi
+
+
+
+
+# 使用 curl 发送消息到钉钉
+curl -X POST $DINGTALK_WEBHOOK \
+     -H 'Content-Type: application/json' \
+     -d "{
+    \"msgtype\": \"actionCard\",
+    \"actionCard\": {
+        \"title\": \"部署通知\",
+        \"text\": \"$MESSAGE\",
+        \"btnOrientation\": \"0\",
+        \"btns\": [
+            {
+                \"title\": \"重新部署\",
+                \"actionURL\": \"http://10.196.80.43:5000?apiUrl=$NEW_JOB_URL2&branch=$BRANCH_NAME\"
+            },
+            {
+                \"title\": \"查看日志\",
+                \"actionURL\": \"$BUILD_URL\"
+            }
+        ]
+    }
+}"
+
