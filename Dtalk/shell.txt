@@ -18,7 +18,7 @@ NEW_JOB_URL2=$NEW_JOB_URL'buildWithParameters'
 echo "原始构建地址:$BUILD_URL"
 new_url=$(echo "$BUILD_URL" | sed 's|http://10.2.119.193:49002|https://10.205.16.32:49002|')
 new_url_api=$new_url'api/json'
-res=$(curl -s -k GET "$new_url_api" -u "wanyuan:11416f3cbd49ca69e37692ba04f51dfdd5")
+res=$(curl -s -k GET "$new_url_api" -u "wanyuan:***********")
 
 # 获取 Jenkins 构建的状态
 BUILD_STATUS=$(echo "$res" | grep -oP '"result": *"\K[^"]*')
